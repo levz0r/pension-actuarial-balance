@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>איזון אקטוארי — קרנות פנסיה</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  body{font-family:-apple-system,"Segoe UI",Arial,sans-serif;margin:0;background:#f4f6f8;color:#1b2733}
+  header{background:#0d3b66;color:#fff;padding:16px 22px}
+  header h1{margin:0;font-size:20px}
+  header p{margin:4px 0 0;font-size:13px;opacity:.85}
+  .wrap{max-width:1180px;margin:18px auto;padding:0 16px}
+  .card{background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.08);padding:16px}
+  .controls{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;align-items:center}
+  .controls strong{font-size:13px;margin-left:6px}
+  button.flt{border:1px solid #0d3b66;background:#fff;color:#0d3b66;border-radius:18px;padding:6px 14px;font-size:13px;cursor:pointer}
+  button.flt:hover{background:#eaf0f6}
+  button.flt.active{background:#0d3b66;color:#fff}
+  button.co{border-radius:18px;padding:5px 12px;font-size:12.5px;cursor:pointer;border:1px solid #ccd4dc;background:#fff}
+  button.co:hover{filter:brightness(.97)}
+  button.co.active{color:#fff;border-color:transparent}
+  .note{font-size:12px;color:#5a6b7b;margin-top:12px;line-height:1.6}
+  .chartbox{position:relative;height:560px}
+  .sep{height:1px;background:#eceff2;margin:6px 0 12px}
+</style>
+</head>
+<body>
+<header>
+  <h1>איזון אקטוארי בגין הגורמים הדמוגרפיים — קרנות פנסיה</h1>
+  <p>ערך רבעוני (%) · יוני 2021 – מרץ 2026 · מקור: פנסיה נט, רשות שוק ההון</p>
+</header>
+<div class="wrap">
+  <div class="card">
+    <div class="controls">
+      <strong>תצוגה:</strong>
+      <button class="flt" data-f="all">הצג הכל</button>
+      <button class="flt" data-f="makifa">מקיפות בלבד</button>
+      <button class="flt" data-f="klalit">כלליות בלבד</button>
+      <button class="flt" data-f="main6">6 מקיפות ותיקות</button>
+    </div>
+    <div class="controls" id="coRow"><strong>לפי חברה <span style="font-weight:400;color:#5a6b7b">(בחירה מרובה):</span></strong></div>
+    <div class="sep"></div>
+    <div class="chartbox"><canvas id="chart"></canvas></div>
+    <div class="note">
+      <b>מקרא:</b> כל חברה בצבע אחד · <b>קו מלא</b> = קרן מקיפה · <b>קו מקווקו</b> = קרן כללית · <b>קו מנוקד</b> = מותג שמוזג (מיטב דש, פסגות — נתונים עד 2021/2022).<br>
+      <b>שימו לב:</b> איזון אקטוארי מדווח <b>רבעונית</b> (מרץ/יוני/ספטמבר/דצמבר) — 20 נקודות לאורך 5 שנים. זהו נתון ברמת הקרן וזהה בין מסלולי ההשקעה. קרנות שאינן קיימות בתקופה מופיעות כקו קטוע.
+    </div>
+  </div>
+</div>
+<script>
+const CSV = `period,מגדל מקפת אישית [162],מיטב פנסיה מקיפה [163],מנורה מבטחים פנסיה [168],כלל פנסיה [170],הפניקס פנסיה מקיפה [209],הראל פנסיה [214],מגדל מקפת משלימה [659],מיטב פנסיה כללית [660],הראל פנסיה כללית [662],מנורה מבטחים משלימה [665],כלל פנסיה משלימה [667],הפניקס פנסיה משלימה [671],מיטב דש פנסיה מקיפה [1032],מיטב דש פנסיה כללית [1177],אלטשולר שחם פנסיה מקיפה [1328],אלטשולר שחם פנסיה כללית [1329],פסגות פנסיה מקיפה [1531],פסגות קרן פנסיה כללית [1532],מור פנסיה מקיפה [13908],מור פנסיה כללית [13918],אינפיניטי פנסיה מקיפה [14036],אינפיניטי פנסיה כללית [14044]
+2021-06,-0.06,0.04,-0.04,0.02,0.06,-0.02,0.06,0.05,0.30,0.58,0.24,0.32,0.15,0.00,0.03,0.14,0.15,0.25,,,,
+2021-09,0.00,0.16,0.06,0.03,0.08,0.05,0.19,0.27,0.20,0.24,0.09,0.23,,,0.10,0.50,,,,,,
+2021-12,-0.03,0.18,-0.05,0.02,0.03,0.00,0.06,-0.09,0.11,0.55,0.03,0.13,,,0.03,0.28,,,,,,
+2022-03,-0.07,0.02,-0.07,0.00,0.02,0.03,0.06,0.08,0.20,-0.02,0.18,0.13,,,0.14,0.65,,,0.00,0.00,,
+2022-06,0.01,0.01,-0.13,0.00,0.11,-0.06,-0.02,0.30,0.14,0.40,0.20,0.39,,,0.06,-0.07,,,0.02,0.00,0.56,0.16
+2022-09,-0.02,0.02,-0.02,-0.01,0.01,-0.09,-0.02,0.29,0.01,0.33,0.18,0.48,,,0.15,0.62,,,0.04,0.09,0.07,0.46
+2022-12,-0.07,0.06,-0.09,-0.01,-0.03,-0.01,0.09,0.32,0.14,0.39,0.24,0.09,,,0.01,0.39,,,0.05,0.11,0.17,1.17
+2023-03,0.01,0.04,-0.06,-0.05,0.02,-0.02,0.19,0.24,0.20,0.60,0.25,0.31,,,0.04,0.51,,,0.06,0.13,0.03,0.33
+2023-06,-0.05,0.21,-0.01,0.05,-0.03,0.00,0.14,0.22,0.14,0.41,0.22,0.38,,,0.23,0.21,,,0.05,0.22,0.12,0.73
+2023-09,0.01,0.04,-0.02,-0.05,0.02,0.02,-0.13,0.11,0.21,0.43,0.14,0.22,,,0.01,0.27,,,0.05,0.17,0.12,0.51
+2023-12,-0.12,-0.26,-0.10,-0.12,-0.14,-0.22,0.07,0.10,0.20,-0.14,-0.09,0.09,,,-0.02,-0.20,,,0.03,0.18,0.50,1.89
+2024-03,0.02,0.12,-0.01,-0.01,-0.02,-0.06,0.05,0.09,0.09,0.15,0.32,0.23,,,0.11,0.22,,,0.10,0.47,0.20,0.33
+2024-06,0.00,0.07,-0.05,0.00,-0.01,-0.03,0.13,0.09,0.11,0.21,0.23,0.00,,,0.04,0.10,,,0.00,0.17,0.14,0.21
+2024-09,0.01,0.01,-0.06,-0.13,-0.04,0.00,0.02,0.10,0.11,-0.02,0.16,0.02,,,0.04,-0.04,,,0.05,0.15,0.12,0.09
+2024-12,0.12,0.09,0.02,0.11,0.07,0.09,0.13,0.10,0.08,0.14,0.18,0.24,,,0.08,0.33,,,0.02,0.13,0.11,0.04
+2025-03,0.09,0.04,-0.05,0.00,0.01,0.02,0.08,0.12,0.11,0.26,0.12,0.23,,,-0.07,0.19,,,0.00,0.01,0.09,0.00
+2025-06,0.01,0.06,-0.13,-0.03,0.03,0.00,0.03,0.20,0.04,0.21,0.21,0.09,,,0.09,0.60,,,-0.07,0.02,0.02,0.00
+2025-09,0.05,0.02,-0.02,0.00,0.00,0.03,0.39,-0.03,0.07,0.25,0.07,0.11,,,-0.10,0.00,,,0.03,0.01,0.01,0.00
+2025-12,-0.06,0.01,-0.08,0.00,-0.03,-0.08,0.13,0.04,0.05,0.21,0.18,0.07,,,0.10,0.06,,,-0.02,0.23,0.02,0.00
+2026-03,-0.02,0.07,-0.07,-0.03,-0.04,-0.02,0.18,0.02,0.08,0.25,0.08,0.18,,,0.11,0.17,,,0.05,0.09,0.06,0.00`;
+
+// id -> {co: company, t: makifa|klalit, legacy: bool}
+const META = {
+ "162":{co:"מגדל",t:"makifa"}, "659":{co:"מגדל",t:"klalit"},
+ "163":{co:"מיטב",t:"makifa"}, "660":{co:"מיטב",t:"klalit"},
+ "1032":{co:"מיטב",t:"makifa",legacy:true}, "1177":{co:"מיטב",t:"klalit",legacy:true},
+ "168":{co:"מנורה",t:"makifa"}, "665":{co:"מנורה",t:"klalit"},
+ "170":{co:"כלל",t:"makifa"}, "667":{co:"כלל",t:"klalit"},
+ "209":{co:"הפניקס",t:"makifa"}, "671":{co:"הפניקס",t:"klalit"},
+ "214":{co:"הראל",t:"makifa"}, "662":{co:"הראל",t:"klalit"},
+ "1328":{co:"אלטשולר שחם",t:"makifa"}, "1329":{co:"אלטשולר שחם",t:"klalit"},
+ "13908":{co:"מור",t:"makifa"}, "13918":{co:"מור",t:"klalit"},
+ "14036":{co:"אינפיניטי",t:"makifa"}, "14044":{co:"אינפיניטי",t:"klalit"},
+ "1531":{co:"פסגות",t:"makifa",legacy:true}, "1532":{co:"פסגות",t:"klalit",legacy:true},
+};
+const COMPANIES = ["מגדל","מיטב","מנורה","כלל","הפניקס","הראל","אלטשולר שחם","מור","אינפיניטי","פסגות"];
+const CO_COLOR = {
+ "מגדל":"#0d3b66","מיטב":"#e63946","מנורה":"#2a9d8f","כלל":"#e76f51","הפניקס":"#6a4c93",
+ "הראל":"#bc6c25","אלטשולר שחם":"#3a86ff","מור":"#8338ec","אינפיניטי":"#ff006e","פסגות":"#588157"
+};
+const MAIN6 = ["162","163","168","170","209","214"];
+
+function start(){
+if(typeof Chart==="undefined"){return setTimeout(start,40);} // wait for CDN
+const rows = CSV.trim().split("\n").map(r=>r.split(","));
+const header = rows[0];
+const labels = rows.slice(1).map(r=>r[0]);
+const fundCols = header.slice(1);
+const idOf = l => (l.match(/\[(\d+)\]/)||[])[1];
+
+// build datasets, ordered by company then type
+let ds = fundCols.map((label,i)=>{
+  const id = idOf(label), m = META[id]||{co:"?",t:"makifa"};
+  const dash = m.legacy ? [2,3] : (m.t==="klalit" ? [7,4] : []);
+  return {
+    label, _id:id, _co:m.co, _t:m.t,
+    data: rows.slice(1).map(r=> r[i+1]===""||r[i+1]===undefined ? null : parseFloat(r[i+1])),
+    borderColor: CO_COLOR[m.co]||"#888", backgroundColor: CO_COLOR[m.co]||"#888",
+    borderDash: dash, borderWidth: m.legacy?1.5:2,
+    pointRadius: 2.4, pointHoverRadius:5, spanGaps:true, tension:0.25
+  };
+});
+const order = id => { const m=META[id]||{}; return (COMPANIES.indexOf(m.co)*10) + (m.t==="klalit"?1:0) + (m.legacy?2:0); };
+ds.sort((a,b)=>order(a._id)-order(b._id));
+
+const chart = new Chart(document.getElementById("chart"),{
+  type:"line", data:{labels, datasets:ds},
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    interaction:{mode:"nearest",intersect:false},
+    plugins:{
+      legend:{position:"right",labels:{boxWidth:14,font:{size:11},usePointStyle:true}},
+      tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.parsed.y}%`}}
+    },
+    scales:{
+      y:{title:{display:true,text:"איזון אקטוארי (%)"},ticks:{stepSize:0.1,callback:v=>Number(v).toFixed(2)+"%"},grid:{color:"#eceff2"}},
+      x:{grid:{display:false}}
+    }
+  }
+});
+
+// preset (תצוגה) buttons
+document.querySelectorAll("button.flt").forEach(b=>b.addEventListener("click",()=>applyFilter(b.dataset.f)));
+
+// company multi-select buttons
+const activeCos = new Set();
+const coRow = document.getElementById("coRow");
+COMPANIES.forEach(co=>{
+  const b=document.createElement("button");
+  b.className="co"; b.textContent=co; b.dataset.co=co;
+  b.style.borderColor=CO_COLOR[co]; b.style.color=CO_COLOR[co];
+  b.addEventListener("click",()=>toggleCo(co));
+  coRow.appendChild(b);
+});
+
+function paintCo(){
+  document.querySelectorAll("button.co").forEach(b=>{
+    const on=activeCos.has(b.dataset.co);
+    b.classList.toggle("active",on);
+    b.style.background = on ? CO_COLOR[b.dataset.co] : "#fff";
+    b.style.color = on ? "#fff" : CO_COLOR[b.dataset.co];
+  });
+}
+
+function toggleCo(co){
+  if(activeCos.has(co)) activeCos.delete(co); else activeCos.add(co);
+  if(activeCos.size===0){ applyFilter("all"); return; }
+  document.querySelectorAll("button.flt").forEach(b=>b.classList.remove("active"));
+  chart.data.datasets.forEach(d=> d.hidden = !activeCos.has(d._co));
+  chart.update();
+  paintCo();
+}
+
+function applyFilter(f){
+  activeCos.clear();
+  chart.data.datasets.forEach(d=>{
+    let show=true;
+    if(f==="makifa") show=d._t==="makifa";
+    else if(f==="klalit") show=d._t==="klalit";
+    else if(f==="main6") show=MAIN6.includes(d._id);
+    d.hidden=!show;
+  });
+  chart.update();
+  document.querySelectorAll("button.flt").forEach(b=>b.classList.toggle("active",b.dataset.f===f));
+  paintCo();
+}
+applyFilter("all");
+}
+start();
+</script>
+</body>
+</html>
